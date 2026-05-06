@@ -1,15 +1,11 @@
 /**
  * API Utility for Google Apps Script Integration
- * All requests are sent to the Apps Script endpoint defined in NEXT_PUBLIC_API_BASE_URL
+ * All requests are proxied through /api/proxy to avoid CORS issues
  */
 
 import { Product, DashboardStats } from './types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-if (!API_BASE_URL) {
-  console.error('NEXT_PUBLIC_API_BASE_URL is not defined in environment variables');
-}
+const PROXY_URL = '/api/proxy';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -18,14 +14,14 @@ export interface ApiResponse<T = any> {
 }
 
 /**
- * Generic API call function
+ * Generic API call function (routed through server-side proxy)
  */
 async function apiCall<T>(
   method: 'GET' | 'POST' = 'GET',
   params?: Record<string, any>
 ): Promise<ApiResponse<T>> {
   try {
-    let url = API_BASE_URL!;
+    let url = PROXY_URL;
 
     if (method === 'GET' && params) {
       const queryParams = new URLSearchParams();
