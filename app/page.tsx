@@ -25,7 +25,7 @@ export default function DashboardPage() {
     try {
       // Fetch stats
       const statsRes = await getDashboardStats();
-      if (statsRes.success) {
+      if (statsRes.success && statsRes.data) {
         setStats(statsRes.data);
       } else {
         addToast('Failed to load dashboard stats', 'error');
