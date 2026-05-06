@@ -2,13 +2,20 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { LayoutWrapper } from '@/components/LayoutWrapper';
-import { StatusBadge } from '@/components/StatusBadge';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import TopNav from '@/components/TopNav';
 import { useToast } from '@/lib/toast-context';
 import { getProductById } from '@/lib/api';
 import { Product } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
+
+const STATUS_COLORS: Record<string, string> = {
+  received:        'status-received',
+  pending_approval:'status-pending',
+  generated:       'status-generated',
+  published:       'status-published',
+  rejected:        'status-rejected',
+  failed:          'status-failed',
+};
 
 export default function ProductDetailsPage() {
   const params = useParams();
@@ -30,11 +37,11 @@ export default function ProductDetailsPage() {
       if (result.success && result.data) {
         setProduct(result.data);
       } else {
-        addToast('Failed to load product details', 'error');
+        addToast('Product not found', 'error');
         router.push('/products');
       }
-    } catch (error) {
-      addToast('An error occurred while loading the product', 'error');
+    } catch {
+      addToast('An error occurred', 'error');
       router.push('/products');
     } finally {
       setIsLoading(false);
@@ -43,189 +50,132 @@ export default function ProductDetailsPage() {
 
   if (isLoading) {
     return (
-      <LayoutWrapper title="Product Details" subtitle="Loading...">
-        <LoadingSpinner fullScreen text="Loading product details..." />
-      </LayoutWrapper>
-    );
-  }
-
-  if (!product) {
-    return (
-      <LayoutWrapper title="Product Not Found" subtitle="The product you're looking for doesn't exist">
-        <div className="text-center py-12">
-          <p className="text-slate-600 mb-4">Product not found</p>
-          <button
-            onClick={() => router.push('/products')}
-            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-          >
-            Back to Products
-          </button>
+      <div className="min-h-screen bg-[#0f0a1e]">
+        <TopNav />
+        <div className="pt-32 flex justify-center">
+          <div className="skeleton w-full max-w-4xl h-96 rounded-3xl" />
         </div>
-      </LayoutWrapper>
+      </div>
     );
   }
 
-  // Determine status display
-  const getStatusMessage = () => {
-    switch (product.status) {
-      case 'pending_approval':
-        return 'Awaiting AI processing...';
-      case 'published':
-        return 'Live and published';
-      case 'rejected':
-        return 'Needs revision';
-      case 'received':
-        return 'Received and queued for processing';
-      case 'failed':
-        return 'Processing failed';
-      default:
-        return 'Unknown status';
-    }
-  };
+  if (!product) return null;
 
   return (
-    <LayoutWrapper title={product.name} subtitle="Full product details">
-      {/* Back Button */}
-      <button
-        onClick={() => router.back()}
-        className="mb-6 text-blue-600 hover:text-blue-700 text-sm font-medium"
-      >
-        ← Back to Products
-      </button>
+    <div className="min-h-screen bg-[#0f0a1e]">
+      <TopNav />
+      <div className="pt-24 pb-16 px-4 sm:px-6 max-w-5xl mx-auto">
+        {/* Back link */}
+        <button 
+          onClick={() => router.back()}
+          className="mb-8 flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-violet-400 transition-colors uppercase tracking-widest"
+        >
+          ← Back to Catalog
+        </button>
 
-      <div className="max-w-4xl">
-        {/* Main Card */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 mb-6">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-6 pb-6 border-b border-slate-200">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">{product.name}</h1>
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
-                  {product.category}
-                </span>
-                <StatusBadge status={product.status} />
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-4xl font-bold text-slate-900">${product.price.toFixed(2)}</p>
-              <p className="text-sm text-slate-600 mt-1">USD</p>
-            </div>
-          </div>
-
-          {/* Product Info Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 pb-8 border-b border-slate-200">
-            <div>
-              <p className="text-sm text-slate-600 mb-1">Created Date</p>
-              <p className="font-medium text-slate-900">{formatDate(product.createdAt)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-600 mb-1">Updated Date</p>
-              <p className="font-medium text-slate-900">{formatDate(product.updatedAt)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-600 mb-1">Product ID</p>
-              <p className="font-mono text-sm text-slate-900">{product.id.slice(0, 8)}...</p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-600 mb-1">Status</p>
-              <p className="font-medium text-slate-900">{getStatusMessage()}</p>
-            </div>
-          </div>
-
-          {/* Features */}
-          <div className="mb-8 pb-8 border-b border-slate-200">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">Features</h2>
-            <p className="text-slate-700 whitespace-pre-wrap">{product.features}</p>
-          </div>
-
-          {/* AI Generated Content Section */}
-          <div className="space-y-6">
-            <h2 className="text-lg font-semibold text-slate-900">AI Generated Content</h2>
-
-            {/* Description */}
-            {product.description ? (
-              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
-                <h3 className="font-semibold text-slate-900 mb-2">Product Description</h3>
-                <p className="text-slate-700">{product.description}</p>
-              </div>
-            ) : (
-              <div className="bg-yellow-50 rounded-lg p-6 border border-yellow-200">
-                <p className="text-sm text-yellow-800">
-                  ⏳ AI description is being generated...
-                </p>
-              </div>
-            )}
-
-            {/* SEO Keywords */}
-            {product.seoKeywords && product.seoKeywords.length > 0 ? (
-              <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
-                <h3 className="font-semibold text-slate-900 mb-4">SEO Keywords</h3>
-                <div className="flex flex-wrap gap-2">
-                  {product.seoKeywords.map((keyword, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
-                    >
-                      {keyword}
-                    </span>
-                  ))}
+        {/* Hero Area */}
+        <div className="glass-dark border border-white/[0.07] rounded-[2.5rem] overflow-hidden mb-8 animate-fade-up">
+          <div className="h-2 w-full bg-gradient-primary" />
+          <div className="p-8 md:p-12">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 uppercase tracking-widest">
+                    {product.category}
+                  </span>
+                  <span className={`text-xs px-3 py-1 rounded-full border font-bold uppercase tracking-widest ${STATUS_COLORS[product.status] || 'status-pending'}`}>
+                    {product.status?.replace('_', ' ')}
+                  </span>
                 </div>
+                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">{product.name}</h1>
+                <p className="text-slate-500 font-mono text-xs uppercase tracking-tighter">ID: {product.id}</p>
               </div>
-            ) : (
-              <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
-                <p className="text-sm text-slate-600">
-                  SEO keywords will be generated once the product is processed
-                </p>
+              <div className="text-left md:text-right">
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Pricing</p>
+                <p className="text-4xl font-black text-white">₹{product.price.toLocaleString('en-IN')}</p>
               </div>
-            )}
+            </div>
 
-            {/* Tags */}
-            {product.tags && product.tags.length > 0 ? (
-              <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
-                <h3 className="font-semibold text-slate-900 mb-4">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {product.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              {/* Left Side: Raw Data */}
+              <div className="space-y-8">
+                <section>
+                  <h2 className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Input Features</h2>
+                  <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/[0.06] text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+                    {product.features}
+                  </div>
+                </section>
+                <section>
+                  <h2 className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">Metadata</h2>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Created</p>
+                      <p className="text-sm text-slate-300">{formatDate(product.createdAt)}</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">Last Updated</p>
+                      <p className="text-sm text-slate-300">{formatDate(product.updatedAt)}</p>
+                    </div>
+                  </div>
+                </section>
               </div>
-            ) : (
-              <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
-                <p className="text-sm text-slate-600">
-                  Tags will be generated once the product is processed
-                </p>
+
+              {/* Right Side: AI Output */}
+              <div className="space-y-8">
+                <section>
+                  <h2 className="text-xs font-bold text-violet-400 uppercase tracking-[0.2em] mb-4">AI Optimized Copy</h2>
+                  {product.description ? (
+                    <div className="p-6 rounded-2xl bg-violet-600/10 border border-violet-500/20 shadow-[0_0_30px_rgba(124,58,237,0.1)]">
+                      <p className="text-slate-200 leading-relaxed">{product.description}</p>
+                    </div>
+                  ) : (
+                    <div className="p-6 rounded-2xl border border-dashed border-white/10 text-center">
+                      <p className="text-sm text-slate-500">Content generation in progress…</p>
+                    </div>
+                  )}
+                </section>
+
+                <section>
+                  <h2 className="text-xs font-bold text-cyan-400 uppercase tracking-[0.2em] mb-4">SEO & Tags</h2>
+                  <div className="space-y-4">
+                    {product.seoKeywords && product.seoKeywords.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {product.seoKeywords.map((k, i) => (
+                          <span key={i} className="px-3 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-semibold">
+                            {k}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {product.tags && product.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {product.tags.map((t, i) => (
+                          <span key={i} className="px-3 py-1 rounded-lg bg-white/[0.05] border border-white/[0.1] text-slate-400 text-xs font-semibold">
+                            #{t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </section>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
-        {/* Status Info Box */}
-        {product.status === 'rejected' && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h3 className="font-semibold text-red-900 mb-2">Revision Needed</h3>
-            <p className="text-sm text-red-800">
-              This product was rejected during processing. Please review the features and try
-              resubmitting the product.
-            </p>
-          </div>
-        )}
-
-        {product.status === 'failed' && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h3 className="font-semibold text-red-900 mb-2">Processing Failed</h3>
-            <p className="text-sm text-red-800">
-              An error occurred while processing this product. Please contact support or try
-              resubmitting the product.
-            </p>
-          </div>
-        )}
+        {/* Action Bar */}
+        <div className="flex gap-4 animate-fade-up" style={{ animationDelay: '0.1s' }}>
+          <button className="flex-1 py-4 bg-violet-600 hover:bg-violet-500 text-white rounded-2xl font-bold transition-all shadow-lg shadow-violet-900/20">
+            Edit Content
+          </button>
+          <button className="flex-1 py-4 glass-dark border border-white/[0.07] text-slate-300 hover:text-white rounded-2xl font-bold transition-all">
+            Duplicate
+          </button>
+          <button className="px-8 py-4 bg-rose-600/10 border border-rose-500/20 text-rose-400 hover:bg-rose-600/20 rounded-2xl font-bold transition-all">
+            Delete
+          </button>
+        </div>
       </div>
-    </LayoutWrapper>
+    </div>
   );
 }
