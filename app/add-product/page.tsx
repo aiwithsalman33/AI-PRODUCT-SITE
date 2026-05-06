@@ -3,10 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TopNav from '@/components/TopNav';
-import PipelineStepper from '@/components/PipelineStepper';
 import LivePreviewCard from '@/components/LivePreviewCard';
 import { useToast } from '@/lib/toast-context';
-import { CATEGORIES, PIPELINE_STEPS, PipelineStep, GeneratedContent } from '@/lib/types';
+import { CATEGORIES, GeneratedContent } from '@/lib/types';
 
 const TONE_OPTIONS = ['Direct-Response', 'Informative', 'Minimal'] as const;
 type Tone = typeof TONE_OPTIONS[number];
@@ -25,27 +24,6 @@ function getFieldError(field: string, value: string): string | null {
   return null;
 }
 
-// Simulates a pipeline run with animated step progression
-function simulatePipeline(
-  setSteps: React.Dispatch<React.SetStateAction<PipelineStep[]>>,
-  onComplete: () => void,
-  onFail?: () => void
-) {
-  const delays = [400, 800, 1200, 900, 600, 700];
-  let current = 0;
-
-  function runNext() {
-    if (current >= PIPELINE_STEPS.length) { onComplete(); return; }
-    setSteps(prev => prev.map((s, i) => i === current ? { ...s, status: 'running' } : s));
-    setTimeout(() => {
-      setSteps(prev => prev.map((s, i) => i === current ? { ...s, status: 'done' } : s));
-      current++;
-      setTimeout(runNext, 200);
-    }, delays[current]);
-  }
-  runNext();
-}
-
 export default function AddProductPage() {
   const router = useRouter();
   const { addToast } = useToast();
@@ -54,9 +32,7 @@ export default function AddProductPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isGenerating, setIsGenerating] = useState(false);
-  const [steps, setSteps] = useState<PipelineStep[]>(PIPELINE_STEPS.map(s => ({ ...s })));
   const [content, setContent] = useState<GeneratedContent | null>(null);
-  const [hasGenerated, setHasGenerated] = useState(false);
 
   const isValid = !['name', 'category', 'features', 'price'].some(f => !!getFieldError(f, form[f as keyof typeof form]));
 
@@ -76,13 +52,10 @@ export default function AddProductPage() {
     setErrors(prev => ({ ...prev, [name]: err || '' }));
   }
 
-  async function handleGenerate(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!isValid || isGenerating) return;
 
-    // Reset steps
-    setSteps(PIPELINE_STEPS.map(s => ({ ...s, status: 'idle' })));
-    setContent(null);
     setIsGenerating(true);
 
     try {
@@ -100,41 +73,24 @@ export default function AddProductPage() {
         body: JSON.stringify(payload),
       });
 
-      // Simulate pipeline animation regardless of response timing
-      simulatePipeline(setSteps, () => {
-        // After pipeline finishes, populate content from API or generate mock
-        setContent({
-          title: form.name,
-          description: `Experience the best of ${form.category.toLowerCase()} with ${form.name}. Designed for performance and built to last, this product brings unmatched value at ₹${parseFloat(form.price).toLocaleString('en-IN')}.`,
-          bullets: form.features
-            .split(/[\n,]/)
-            .filter(f => f.trim().length > 0)
-            .slice(0, 5)
-            .map(f => f.trim()),
-          seoTitle: `Buy ${form.name} – Best ${form.category} | AI Product Studio`,
-          seoDescription: `Shop ${form.name} in ${form.category} category. Premium quality, competitive pricing. Order now and get fast delivery.`,
-        });
-        setIsGenerating(false);
-        setHasGenerated(true);
-        addToast('Content generated successfully!', 'success');
-      });
+      const data = await res.json();
+      
+      if (data.success || res.ok) {
+        addToast('Product saved successfully!', 'success');
+        setTimeout(() => router.push('/products'), 1000);
+      } else {
+        addToast(data.error || 'Failed to save product', 'error');
+      }
     } catch (err) {
-      setSteps(prev => prev.map((s, i) => s.status === 'running' ? { ...s, status: 'failed' } : s));
+      addToast('An error occurred while saving', 'error');
+    } finally {
       setIsGenerating(false);
-      addToast('Generation failed. Please try again.', 'error');
     }
-  }
-
-  async function handleSave() {
-    if (!content) return;
-    addToast('Product saved to Google Sheets!', 'success');
-    setTimeout(() => router.push('/products'), 1000);
   }
 
   function handleReset() {
     setForm({ name: '', category: '', features: '', price: '', currency: 'INR', tone: 'Informative' });
-    setErrors({}); setTouched({}); setContent(null); setHasGenerated(false);
-    setSteps(PIPELINE_STEPS.map(s => ({ ...s, status: 'idle' })));
+    setErrors({}); setTouched({}); setContent(null);
   }
 
   const inputClass = (field: string) =>
@@ -150,20 +106,20 @@ export default function AddProductPage() {
       <div className="pt-20 pb-16 px-4 sm:px-6 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-10 animate-fade-up">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-bold uppercase tracking-widest mb-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-            New Product
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-bold uppercase tracking-widest mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            Product Entry
           </div>
-          <h1 className="text-3xl md:text-4xl font-black text-white mb-2">Generate Product Content</h1>
-          <p className="text-slate-400">Fill in the details and let AI create high-converting copy for you.</p>
+          <h1 className="text-3xl md:text-4xl font-black text-white mb-2">Add New Product</h1>
+          <p className="text-slate-400">Enter product details to save them to your catalog.</p>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-8">
-          {/* ── Left Column: Form + Pipeline ── */}
+          {/* ── Left Column: Form ── */}
           <div className="space-y-6">
             {/* Form Card */}
             <div className="glass-dark border border-white/[0.07] rounded-2xl p-6 animate-fade-up" style={{ animationDelay: '0.1s' }}>
-              <form onSubmit={handleGenerate} className="space-y-5">
+              <form onSubmit={handleSave} className="space-y-5">
                 {/* Product Name */}
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Product Name *</label>
@@ -228,79 +184,48 @@ export default function AddProductPage() {
                   {errors.features && touched.features && <p className="mt-1 text-xs text-rose-400">{errors.features}</p>}
                 </div>
 
-                {/* Tone Preset */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Tone Preset</label>
-                  <div className="flex gap-2 flex-wrap">
-                    {TONE_OPTIONS.map(t => (
-                      <button
-                        key={t} type="button"
-                        onClick={() => setForm(prev => ({ ...prev, tone: t }))}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${
-                          form.tone === t
-                            ? 'bg-violet-600/30 border-violet-500/50 text-violet-300'
-                            : 'bg-white/[0.03] border-white/[0.07] text-slate-400 hover:border-violet-500/30 hover:text-slate-200'
-                        }`}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Action Buttons */}
-                <div className="flex gap-3 pt-2">
+                <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
                     disabled={!isValid || isGenerating}
-                    className="flex-1 px-6 py-3.5 bg-gradient-primary rounded-xl font-bold text-white text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-[0_0_30px_rgba(124,58,237,0.4)] hover:-translate-y-0.5 transition-all duration-300"
+                    className="flex-1 px-6 py-4 bg-gradient-primary rounded-xl font-bold text-white text-base disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-[0_0_30px_rgba(124,58,237,0.4)] hover:-translate-y-0.5 transition-all duration-300"
                   >
                     {isGenerating ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                        Generating…
+                        <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                        Saving Product…
                       </span>
-                    ) : hasGenerated ? '↺ Regenerate' : '✦ Generate Content'}
+                    ) : '✓ Save Product'}
                   </button>
-                  {hasGenerated && (
-                    <button
-                      type="button" onClick={handleSave}
-                      className="flex-1 px-6 py-3.5 bg-cyan-600/20 border border-cyan-500/30 text-cyan-300 rounded-xl font-bold text-sm hover:bg-cyan-600/30 transition-all"
-                    >
-                      ✓ Save Product
-                    </button>
-                  )}
                   <button
                     type="button" onClick={handleReset}
-                    className="px-4 py-3.5 glass-dark border border-white/[0.07] text-slate-400 hover:text-white rounded-xl text-sm font-semibold transition-all"
+                    className="px-6 py-4 glass-dark border border-white/[0.07] text-slate-400 hover:text-white rounded-xl text-sm font-semibold transition-all"
                   >
                     Reset
                   </button>
                 </div>
               </form>
             </div>
-
-            {/* Pipeline Stepper */}
-            <div className="glass-dark border border-white/[0.07] rounded-2xl p-6 animate-fade-up" style={{ animationDelay: '0.2s' }}>
-              <div className="flex items-center gap-2 mb-5">
-                <span className="text-sm font-bold text-slate-300">Automation Pipeline</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 font-semibold">n8n → Sheets</span>
-              </div>
-              <PipelineStepper steps={steps} />
-            </div>
           </div>
 
           {/* ── Right Column: Live Preview ── */}
           <div className="space-y-4 animate-fade-up" style={{ animationDelay: '0.15s' }}>
             <div className="sticky top-24">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Live Preview</p>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Card Preview</p>
               <LivePreviewCard
-                loading={isGenerating}
-                content={content}
+                loading={false}
+                content={null}
                 productName={form.name}
                 category={form.category}
                 price={form.price}
               />
+              {/* Optional Info box */}
+              <div className="mt-6 p-5 rounded-2xl bg-cyan-500/[0.03] border border-cyan-500/10">
+                <p className="text-xs text-cyan-300/80 leading-relaxed">
+                  <strong className="text-cyan-400">Note:</strong> After saving, our AI will automatically process your product in the background to generate descriptions and SEO tags.
+                </p>
+              </div>
             </div>
           </div>
         </div>

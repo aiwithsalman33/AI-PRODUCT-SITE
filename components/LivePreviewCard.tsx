@@ -40,18 +40,6 @@ export default function LivePreviewCard({
     );
   }
 
-  if (!content) {
-    return (
-      <div className="glass-dark border border-dashed border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center text-center min-h-[320px] animate-fade-in">
-        <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-3xl mb-4">
-          ✦
-        </div>
-        <p className="font-semibold text-slate-300 mb-1">No content generated yet</p>
-        <p className="text-sm text-slate-500">Fill in the form and click <strong className="text-violet-400">Generate Content</strong></p>
-      </div>
-    );
-  }
-
   return (
     <div className="glass-dark border border-violet-500/20 rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(124,58,237,0.1)] animate-fade-up">
       {/* Header gradient bar */}
@@ -70,31 +58,29 @@ export default function LivePreviewCard({
 
         {/* Product name */}
         <h3 className="text-xl font-bold text-white leading-tight">
-          {content.title || productName}
+          {content?.title || productName || 'Product Name'}
         </h3>
 
         {/* Description */}
-        <p className="text-sm text-slate-300 leading-relaxed">
-          {content.description}
+        <p className="text-sm text-slate-400 leading-relaxed italic">
+          {content?.description || 'Your AI-optimized description will appear here after saving...'}
         </p>
 
         {/* Bullets */}
-        {content.bullets.length > 0 && (
-          <ul className="space-y-2">
-            {content.bullets.map((b, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
-                <span className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-violet-500/20 text-violet-400 text-xs flex items-center justify-center font-bold">✓</span>
-                {b}
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="space-y-2">
+          {(content?.bullets || ['Feature 1...', 'Feature 2...']).map((b, i) => (
+            <div key={i} className="flex items-start gap-2 text-sm text-slate-500">
+              <span className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-white/5 text-slate-600 text-[10px] flex items-center justify-center font-bold">?</span>
+              {b}
+            </div>
+          ))}
+        </div>
 
         {/* SEO section */}
-        <div className="border-t border-white/[0.06] pt-4 space-y-2">
-          <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-2">SEO Preview</p>
-          <p className="text-sm font-semibold text-cyan-300">{content.seoTitle}</p>
-          <p className="text-xs text-slate-400 leading-relaxed">{content.seoDescription}</p>
+        <div className="border-t border-white/[0.06] pt-4 space-y-2 opacity-50">
+          <p className="text-xs text-slate-600 uppercase tracking-widest font-bold mb-2">SEO Preview</p>
+          <p className="text-sm font-semibold text-slate-500">{content?.seoTitle || 'SEO Title...'}</p>
+          <p className="text-xs text-slate-600 leading-relaxed">{content?.seoDescription || 'Meta description...'}</p>
         </div>
       </div>
     </div>
