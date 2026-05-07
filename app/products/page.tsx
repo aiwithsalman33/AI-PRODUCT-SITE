@@ -24,7 +24,11 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  useEffect(() => { fetchProducts(); }, []);
+  useEffect(() => {
+    fetchProducts();
+    const interval = setInterval(fetchProducts, 30000); // Refresh every 30s
+    return () => clearInterval(interval);
+  }, []);
 
   async function fetchProducts() {
     setIsLoading(true);
