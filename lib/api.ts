@@ -49,10 +49,18 @@ async function apiCall<T>(
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const responseData = await response.json();
+    
+    // Support various response formats (flat array, {data: []}, or {products: []})
+    let finalData = responseData;
+    if (responseData && typeof responseData === 'object' && !Array.isArray(responseData)) {
+      if (responseData.products) finalData = responseData.products;
+      else if (responseData.data) finalData = responseData.data;
+    }
+
     return {
-      success: true,
-      data,
+      success: responseData.success !== false,
+      data: finalData,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -83,7 +91,7 @@ export async function addProduct(productData: {
  */
 export async function getProducts(): Promise<ApiResponse<Product[]>> {
   return apiCall<Product[]>('GET', {
-    action: 'get_products',
+    action: 'products',
   });
 }
 
