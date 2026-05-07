@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     const response = await fetch(url, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
     });
 
     const data = await response.json();

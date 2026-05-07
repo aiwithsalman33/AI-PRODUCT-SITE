@@ -36,6 +36,7 @@ async function apiCall<T>(
       headers: {
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
     };
 
     if (method === 'POST' && params) {
